@@ -1,0 +1,40 @@
+# Simple Makefile for CROSS Reference Implementation
+# This Makefile compiles the CROSS reference implementation into a static library
+# and builds a simple test program.
+
+CC = gcc
+CFLAGS = -O3 -Wall -Wextra -IReference_Implementation/include
+
+# Security Parameter Selection (Required)
+# Category: CATEGORY_1, CATEGORY_3, CATEGORY_5
+# RSDP Variant: RSDP, RSDPG
+# Optimization Target: BALANCED, SIG_SIZE, SPEED
+PARAMS = -DCATEGORY_1=1 -DBALANCED=1 -DRSDP=1
+
+# Source files for the library
+LIB_SOURCES = \
+	Reference_Implementation/lib/CROSS.c \
+	Reference_Implementation/lib/sign.c \
+	Reference_Implementation/lib/merkle.c \
+	Reference_Implementation/lib/seedtree.c \
+	Reference_Implementation/lib/csprng_hash.c \
+	Reference_Implementation/lib/pack_unpack.c \
+	Reference_Implementation/lib/keccakf1600.c \
+	Reference_Implementation/lib/fips202.c
+
+LIB_OBJECTS = $(LIB_SOURCES:.c=.o)
+LIB_NAME = libcross.a
+
+all: test_cross
+
+$(LIB_NAME): $(LIB_OBJECTS)
+	ar rcs $@ $^
+
+%.o: %.c
+	$(CC) $(CFLAGS) $(PARAMS) -c $< -o $@
+
+test_cross: test_api.c $(LIB_NAME)
+	$(CC) $(CFLAGS) $(PARAMS) $^ -o $@ -lm
+
+clean:
+	rm -f $(LIB_OBJECTS) $(LIB_NAME) test_cross

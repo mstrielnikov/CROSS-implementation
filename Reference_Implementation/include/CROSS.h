@@ -76,6 +76,8 @@ typedef struct {
 } CROSS_sig_t;
 
 
+#include "CROSS_namespace.h"
+
 /* keygen cannot fail */
 void CROSS_keygen(sk_t *SK,
                  pk_t *PK);

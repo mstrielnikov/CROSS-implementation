@@ -30,6 +30,7 @@
  **/
 
 #pragma once
+#include "CROSS_namespace.h"
 
 #include "csprng_hash.h"
 #include "parameters.h"

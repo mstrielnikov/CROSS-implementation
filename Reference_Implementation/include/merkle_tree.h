@@ -29,8 +29,10 @@
  *
  **/
 
-#if defined(NO_TREES)
+#pragma once
+#include "CROSS_namespace.h"
 
+#if defined(NO_TREES)
 void tree_root(uint8_t root[HASH_DIGEST_LENGTH],
                uint8_t leaves[T][HASH_DIGEST_LENGTH]);
 

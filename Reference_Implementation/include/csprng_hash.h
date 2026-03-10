@@ -30,6 +30,7 @@
  **/
 
 #pragma once
+#include "CROSS_namespace.h"
 
 #ifndef CSPRNG_HASH_H
 #define CSPRNG_HASH_H

@@ -30,6 +30,7 @@
  **/
 
 #pragma once
+#include "CROSS_namespace.h"
 
 #include <stddef.h>
 #include <stdint.h>

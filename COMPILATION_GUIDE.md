@@ -1,90 +1,92 @@
-# CROSS Compilation and Linking Guide
+# CROSS Compilation Guide
 
-This document provides instructions for compiling the CROSS implementation and linking it into your projects.
+## Original Authors
 
-## Prerequisites
+This implementation is authored by Alessandro Barenghi, Marco Gianvecchio, Patrick Karl, Gerardo Pelosi, and Jonas Schupp. The code is placed in the public domain.
 
-- **C11 Compiler**: GCC (9.4.0+ recommended) or Clang.
-- **Build System**: CMake (3.7+) for existing benchmarks and tests.
-- **Dependencies**:
-  - `libkeccak` (optional, fallback implementation provided).
-  - Standard C libraries (`math`, `ssl`, `crypto`).
+## Build System
 
-## 1. Building Benchmarks and KAT Generation
+This project uses a simple **Makefile** as the single build tool.
 
-The project includes pre-configured CMake setups for performance benchmarking and Known Answer Test (KAT) generation.
-
-### Benchmarking
-
-To build the benchmarking binaries:
-
-1. `cd Additional_Implementations/Benchmarking`
-2. `mkdir build && cd build`
-3. `cmake ../ -DREFERENCE=1` (use `-DREFERENCE=0` for AVX2 optimized version)
-4. `make -j$(nproc)`
-
-The binaries will be generated in the `bin/` directory.
-
-### KAT Generation
-
-To build the KAT generation binaries:
-
-1. `cd Additional_Implementations/KAT_Generation`
-2. `mkdir build && cd build`
-3. `cmake ../ -DREFERENCE=1`
-4. `make -j$(nproc)`
-
-## 2. Manual Compilation (Reference Implementation)
-
-If you wish to compile the library manually or integrate it into an existing build system without CMake, follow these steps.
-
-### Required Source Files
-
-For a basic reference implementation, you need:
-
-- `Reference_Implementation/lib/CROSS.c`
-- `Reference_Implementation/lib/sign.c`
-- `Reference_Implementation/lib/merkle.c`
-- `Reference_Implementation/lib/seedtree.c`
-- `Reference_Implementation/lib/csprng_hash.c`
-- `Reference_Implementation/lib/pack_unpack.c`
-- `Reference_Implementation/lib/keccakf1600.c`
-- `Reference_Implementation/lib/fips202.c`
-
-### Include Paths
-
-Headers are located in `Reference_Implementation/include/`.
-
-### Preprocessor Definitions
-
-You **must** define the security category and variant at compile time. Example for Category 1, RSDP balanced:
-`-DCATEGORY_1=1 -DBALANCED=1 -DRSDP=1`
-
-### Example Compilation Command
+## Quick Build
 
 ```bash
-gcc -O3 -IReference_Implementation/include \
-    -DCATEGORY_1=1 -DBALANCED=1 -DRSDP=1 \
-    Reference_Implementation/lib/*.c -o cross_reference
+# Build reference + optimized + test
+make all
+
+# Run functional tests
+./cross_test
 ```
 
-## 3. Linking as a Library
+## Build Targets
 
-To link CROSS into your own C project, you should:
+| Target | Description |
+|--------|-------------|
+| `make all` | Build ref + opt libraries + test binary |
+| `make ref` | Build reference library (libcross_ref.a) |
+| `make opt` | Build optimized library (libcross_opt.a) |
+| `make test` | Build and run test binary |
+| `make clean` | Remove build artifacts |
 
-1. Include the API header: `#include "api.h"`
-2. Link against the compiled objects or static library.
-3. **Provide a `randombytes` implementation**. The library expects a function with the following signature:
-   ```c
-   void randombytes(unsigned char *x, unsigned long long xlen);
-   ```
+## Parameters
 
-### Core API Functions
+```bash
+make all CATEGORY=1|3|5 VARIANT=RSDP|RSDPG TARGET=BALANCED|SPEED|SIG_SIZE
+```
+
+| Parameter | Options | Default |
+|-----------|---------|---------|
+| CATEGORY | 1, 3, 5 | 1 |
+| VARIANT | RSDP, RSDPG | RSDP |
+| TARGET | BALANCED, SPEED, SIG_SIZE | BALANCED |
+| IMPL | ref, opt | ref |
+
+## Examples
+
+```bash
+# Default build
+make all
+
+# Category 3, RSDPG variant, SPEED target
+make all CATEGORY=3 VARIANT=RSDPG TARGET=SPEED
+
+# Run test with optimized implementation
+make test IMPL=opt
+```
+
+## Manual Compilation
+
+If you need custom compilation:
+
+```bash
+# Reference
+gcc -O3 -Wall -Wextra -std=c11 \
+    -IReference_Implementation/include -IUnified_Implementation/include \
+    -DCATEGORY_1=1 -DBALANCED=1 -DRSDP=1 \
+    Reference_Implementation/lib/*.c -o cross -lm
+
+# Optimized (note: Optimized include path first!)
+gcc -O3 -Wall -Wextra -std=c11 \
+    -IOptimized_Implementation/include -IReference_Implementation/include -IUnified_Implementation/include \
+    -DCATEGORY_1=1 -DBALANCED=1 -DRSDP=1 \
+    Optimized_Implementation/lib/CROSS.c Optimized_Implementation/lib/merkle.c \
+    Optimized_Implementation/lib/seedtree.c Optimized_Implementation/lib/fips202x4.c \
+    Optimized_Implementation/lib/KeccakP-1600-times4-SIMD256.c \
+    Reference_Implementation/lib/csprng_hash.c Reference_Implementation/lib/pack_unpack.c \
+    Reference_Implementation/lib/keccakf1600.c Reference_Implementation/lib/fips202.c \
+    Reference_Implementation/lib/sign.c -o cross -lm
+```
+
+## Linking
+
+Provide a `randombytes` function and link with `-lm`:
 
 ```c
-int crypto_sign_keypair(unsigned char *pk, unsigned char *sk);
-int crypto_sign(unsigned char *sm, unsigned long long *smlen, const unsigned char *m, unsigned long long mlen, const unsigned char *sk);
-int crypto_sign_open(unsigned char *m, unsigned long long *mlen, const unsigned char *sm, unsigned long long smlen, const unsigned char *pk);
+void randombytes(unsigned char *x, unsigned long long xlen);
 ```
 
-For a concrete example, see [Makefile.example](file:///home/max/projects/CROSS-implementation/Makefile.example).
+## Troubleshooting
+
+- **Missing headers:** Ensure `-IUnified_Implementation/include` is in path
+- **Missing SIMD functions:** Put Optimized path BEFORE Reference in include path
+- **Link errors:** Provide `randombytes` implementation and link `-lm`
